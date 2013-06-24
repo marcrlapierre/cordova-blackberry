@@ -18,6 +18,8 @@
 #
 #!/bin/sh
 
+source $(dirname "$0")/init
+
 NODE=$(command -v node)
 NPM=$(command -v npm)
 JAVA=$(command -v java)
@@ -44,7 +46,7 @@ elif [ -z "$SIGNER" ]; then
     echo blackberry-signer cannot be found on the path. Aborting.
     EXIT_CODE=1
 else
-    node "$( dirname "$0" )/check_reqs.js" "$@"
+    $CORDOVA_NODE "$( dirname "$0" )/check_reqs.js" "$@"
     EXIT_CODE=0
 fi
 

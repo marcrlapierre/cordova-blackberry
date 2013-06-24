@@ -72,7 +72,7 @@ function validateProjectPath() {
     if (!process.argv[2]) {
         console.log("You must give a project PATH");
         help();
-        process.exit(2); 
+        process.exit(2);
         return "";
     } else {
         return path.resolve(process.argv[2]);
@@ -118,11 +118,20 @@ function copyFilesToProject() {
     wrench.mkdirSyncRecursive(project_path, 0777);
     wrench.copyDirSyncRecursive(TEMPLATE_PROJECT_DIR, project_path);
 
+    //copy dependencies folder if exists
+    if (fs.existsSync(path.join(BIN_DIR, "dependencies"))) {
+        wrench.mkdirSyncRecursive(path.join(project_path, "cordova", "dependencies"), 0755);
+        wrench.copyDirSyncRecursive(path.join(BIN_DIR, "dependencies"), path.join(project_path, "cordova", "dependencies"));
+    }
+
     // copy repo level target tool to project
     utils.copyFile(path.join(BIN_DIR, "target"), path.join(project_path, "cordova"));
     utils.copyFile(path.join(BIN_DIR, "target.bat"), path.join(project_path, "cordova"));
     utils.copyFile(path.join(BIN_DIR, "lib", "target.js"), path.join(project_path, "cordova", "lib"));
     utils.copyFile(path.join(BIN_DIR, "lib", "utils.js"), path.join(project_path, "cordova", "lib"));
+
+    // copy repo level init script to project
+    utils.copyFile(path.join(BIN_DIR, "init"), path.join(project_path, "cordova"));
 
     // change file permission for cordova scripts because ant copy doesn't preserve file permissions
     wrench.chmodSyncRecursive(path.join(project_path,"cordova"), 0700);
@@ -133,6 +142,7 @@ function copyFilesToProject() {
     //copy node modules to cordova build directory
     wrench.mkdirSyncRecursive(nodeModulesDest, 0777);
     wrench.copyDirSyncRecursive(MODULES_PROJECT_DIR, nodeModulesDest);
+
     //change permissions of plugman
     fs.chmodSync(path.join(nodeModulesDest, "plugman", "main.js"), 0755);
 

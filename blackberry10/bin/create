@@ -23,6 +23,8 @@
 #
 #!/bin/sh
 
+source $(dirname "$0")/init
+
 CURRENT_DIR=$(pwd)
 BIN_DIR=$(dirname "$0")
 
@@ -41,5 +43,5 @@ cd "$CURRENT_DIR"
 if ! [ $? -eq 0 ]; then
   echo "NPM install failed. Aborting."
 else
-  node "$BIN_DIR"/create.js "$@"
+  $CORDOVA_NODE "$BIN_DIR"/create.js "$@"
 fi

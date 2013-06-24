@@ -98,7 +98,7 @@ function clean(previous, baton) {
     baton.take();
 
     cleanScript = childProcess.exec(execName, {
-        "cwd": path.normalize(__dirname + "/.."),
+        "cwd": path.normalize(__dirname),
         "env": process.env
     });
 

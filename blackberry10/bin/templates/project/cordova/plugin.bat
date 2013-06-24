@@ -18,4 +18,4 @@ goto comment
        under the License.
 :comment
 
-@node.exe %~dps0\plugin %*
+@node.exe %~dps0\lib\plugin-wrapper %*
