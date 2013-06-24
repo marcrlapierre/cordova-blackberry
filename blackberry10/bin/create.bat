@@ -17,6 +17,7 @@ goto comment
        specific language governing permissions and limitations
        under the License.
 :comment
+call "%BIN_DIR%check_reqs"
 
 set BIN_DIR=%~dp0
 
@@ -28,4 +29,4 @@ pushd %BIN_DIR%..
 call npm install
 popd
 
-node.exe "%BIN_DIR%create.js" %*
+%CORDOVA_NODE% "%BIN_DIR%create.js" %*
