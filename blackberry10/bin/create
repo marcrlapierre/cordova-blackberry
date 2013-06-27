@@ -37,11 +37,11 @@ fi
 #Run npm install every time (even if node_modules folder is present) to cover platform upgrade
 cd "$BIN_DIR"/..
 #Removed sudo usage so that node modules are not ownder by root
-npm install
+$CORDOVA_NODE/npm install
 cd "$CURRENT_DIR"
 
 if ! [ $? -eq 0 ]; then
   echo "NPM install failed. Aborting."
 else
-  $CORDOVA_NODE "$BIN_DIR"/create.js "$@"
+  $CORDOVA_NODE/node "$BIN_DIR"/create.js "$@"
 fi
