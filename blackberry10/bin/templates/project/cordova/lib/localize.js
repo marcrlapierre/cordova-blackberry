@@ -38,7 +38,7 @@ var Localize = require("localize"),
             "en": "Cannot sign application - No buildId provided [--buildId]"
         },
         "EXCEPTION_DEBUG_TOKEN_NOT_FOUND": {
-            "en": "Failed to find debug token"
+            "en": "Could not find .bar file in /build/device. Please ensure that the /cordova/run command has been run to generate a debug token."
         },
         "EXCEPTION_DEBUG_TOKEN_WRONG_FILE_EXTENSION": {
             "en": "Specified debug token not a .bar extension"

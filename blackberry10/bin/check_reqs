@@ -35,7 +35,7 @@ elif [ -z "$JAVA" ]; then
     echo java cannot be found on the path. Aborting.
     EXIT_CODE=1
 elif [ -z "$PACKAGER" ]; then
-    echo blackberry-nativepackager cannot be found on the path. Aborting.
+    echo BBNDK tools could not be found. Please ensure you have installed the BlackBerry Native SDK http://developer.blackberry.com/native/ and have the PATH configured via bbndk-env script \(\'source bbndk-env.sh\' on Mac/Linux \'bbndk-env.bat\' on Windows\).
     EXIT_CODE=1
 elif [ -z "$DEPLOYER" ]; then
     echo blackberry-deploy cannot be found on the path. Aborting.
@@ -49,4 +49,3 @@ else
 fi
 
 exit $EXIT_CODE
-
