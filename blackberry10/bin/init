@@ -28,8 +28,11 @@ if [ -x $LOCAL_NODE_BIN ]; then
     #set CORDOVA_NODE to local node version, if exists
     CORDOVA_NODE=$LOCAL_NODE_BIN
 else
-    #set CORDOVA_NODE to whichever node is on path
-    CORDOVA_NODE=$(dirname $(command -v node))
+    #set CORDOVA_NODE to whichever node is on path, if exists
+    NODE_PATH=$(command -v node)
+    if [ ! -z "$NODE_PATH" ]; then
+        CORDOVA_NODE=$(dirname $NODE_PATH)
+    fi
 fi
 
 export CORDOVA_NODE=$CORDOVA_NODE

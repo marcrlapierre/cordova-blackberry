@@ -234,7 +234,7 @@ function build(previous, baton) {
     }
 
     nativeDeploy = childProcess.exec(execName, {
-        "cwd": path.normalize(__dirname),
+        "cwd": path.normalize(__dirname + "/.."),
         "env": process.env
     });
 
