@@ -17,8 +17,7 @@
 #       under the License.
 #
 #!/bin/sh
-
-LOCAL_NODE_BIN=$(dirname "$0")/dependencies/node/bin
+LOCAL_NODE_BIN=$(pwd)/$(dirname "$0")/dependencies/node/bin
 
 if [ ! -z "$CORDOVA_NODE" ]; then
     #$CORDOVA_NODE already set, exit script.
