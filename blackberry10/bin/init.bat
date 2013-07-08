@@ -1,3 +1,4 @@
+@ECHO OFF
 goto comment
        Licensed to the Apache Software Foundation (ASF) under one
        or more contributor license agreements.  See the NOTICE file
@@ -17,14 +18,22 @@ goto comment
        under the License.
 :comment
 
-set LOCAL_NODE_BINARY="%~dp0dependencies\node\windows\node.exe"
+set LOCAL_NODE_BINARY="%~dp0dependencies\node\bin"
 
 if defined %CORDOVA_NODE% { exit /B }
 
 if exist %LOCAL_NODE_BINARY% (
-    set CORDOVA_NODE="%LOCAL_NODE_BINARY%"
+    set CORDOVA_NODE=%LOCAL_NODE_BINARY%
 ) else (
-    set CORDOVA_NODE="node.exe"
+    for %%e in (%PATHEXT%) do (
+        for %%X in (node%%e) do (
+            if not defined FOUNDNODE (
+                set FOUNDNODE=%%~$PATH:X
+            )
+        )
+    )
+    
+    if defined FOUNDNODE (
+        for %%F in ("%FOUNDNODE%") do set CORDOVA_NODE="%%~dpF"
+    )
 )
-
-echo LOCAL_NODE_BINARY=%LOCAL_NODE_BINARY%

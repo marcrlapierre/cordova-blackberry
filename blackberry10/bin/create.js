@@ -131,8 +131,12 @@ function copyFilesToProject() {
     utils.copyFile(path.join(BIN_DIR, "lib", "utils.js"), path.join(project_path, "cordova", "lib"));
 
     // copy repo level init script to project
-    utils.copyFile(path.join(BIN_DIR, "init"), path.join(project_path, "cordova"));
-
+    if (utils.isWindows()) {
+        utils.copyFile(path.join(BIN_DIR, "init.bat"), path.join(project_path, "cordova"));
+    } else {
+        utils.copyFile(path.join(BIN_DIR, "init"), path.join(project_path, "cordova"));
+    }
+    
     // change file permission for cordova scripts because ant copy doesn't preserve file permissions
     wrench.chmodSyncRecursive(path.join(project_path,"cordova"), 0700);
 
