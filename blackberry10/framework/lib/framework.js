@@ -152,16 +152,16 @@ var _self = {
         addEvents();
 
         //if debugging is enabled, show the IP and port for webinspector
-        if (config.debugEnabled) {
-            callback = function () {
-                showWebInspectorInfo();
+        // if (config.debugEnabled) {
+        //     callback = function () {
+        //         showWebInspectorInfo();
 
-                //Remove listener. Alert should only be shown once.
-                webview.removeEventListener("DocumentLoadFinished", callback);
-            };
+        //         //Remove listener. Alert should only be shown once.
+        //         webview.removeEventListener("DocumentLoadFinished", callback);
+        //     };
 
-            webview.addEventListener("DocumentLoadFinished", callback);
-        }
+        //     webview.addEventListener("DocumentLoadFinished", callback);
+        // }
     },
     stop: function () {
         removeEvents();
