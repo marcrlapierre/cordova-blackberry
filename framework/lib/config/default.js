@@ -81,6 +81,5 @@ module.exports = {
     enableWebSecurity: true,
     enablePopupBlocker: false,
     backgroundColor: 0x00FFFFFF,
-    enableDiskCache: false,
-
+    enableDiskCache: false
 };
