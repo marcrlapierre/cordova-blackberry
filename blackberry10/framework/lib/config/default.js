@@ -72,5 +72,8 @@ module.exports = {
     enableFormControl: true,
     enableChildWebView: true,
     enableWebSecurity: true,
-    enablePopupBlocker: false
+    enablePopupBlocker: false,
+
+    backgroundColor: 0x00FFFFFF
+
 };
