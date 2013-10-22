@@ -207,18 +207,18 @@ JNEXT.JPLAYER_ = function()
 	 * in the searchResult event.
 	 * @param {String} id A unique identifier for the request
 	 * @param {Integer} mediaSourceId The ID of the media source.
-	 * @param {String} mediaNodeId The ID of the media node from which to search. Searching from the root node ID searches the entire media source.
 	 * @param {String} searchTerm The term to search for.
+	 * @param {String} filter Used to filter the search results
 	 * @param {Number} limit The maximum number of media nodes to retrieve. A limit of -1 indicates no limit.
 	 * @param {Number} offset The offset at which to start retrieving media nodes. An offset of 0 indicates no offset.
 	 * @returns {Boolean} True if the call was successful, False if not.
 	 */
-	self.search = function(id, mediaSourceId, mediaNodeId, searchTerm, limit, offset) {
+	self.search = function(id, mediaSourceId, searchTerm, filter, limit, offset) {
 		return invoke('search', {
 			id: id,
 			mediaSourceId: mediaSourceId,
-			mediaNodeId: mediaNodeId,
 			searchTerm: searchTerm,
+			filter: filter,
 			limit: limit,
 			offset: offset
 		});
@@ -288,17 +288,15 @@ JNEXT.JPLAYER_ = function()
 	 * @param {String} mediaNodeId The media node ID on which to base the track session.
 	 * @param {Number} index The index of the item within the track session to set as current after creation.
 	 * @param {Number} limit The maximum number of media nodes to add to the track session. A limit of -1 indicates no limit.
-	 * @param {Number} offset The offset within the specified media node at which to start building the track session.
 	 * @returns {Boolean} True if the call was successful, False if not.
 	 */
-	self.createTrackSession = function(id, mediaSourceId, mediaNodeId, index, limit, offset) {
+	self.createTrackSession = function(id, mediaSourceId, mediaNodeId, index, limit) {
 		return invoke('createTrackSession', {
 			id: id,
 			mediaSourceId: mediaSourceId,
 			mediaNodeId: mediaNodeId,
 			index: index,
-			limit: limit,
-			offset: offset
+			limit: limit
 		});
 	};
 
