@@ -17,7 +17,8 @@
  * under the License.
  */
 
-var MIN_NODE_VER = "0.9.9";
+var MIN_NODE_VER = "0.9.9",
+    signingUtils = require('./lib/signing-utils');
 
 function isNodeNewerThanMin () {
     //Current version is stored as a String in format "X.X.X"
@@ -28,7 +29,20 @@ function isNodeNewerThanMin () {
 
 if (!isNodeNewerThanMin()) {
     console.log("Node version '" + process.versions.node + "' is not new enough. Please upgrade to " + MIN_NODE_VER + " or newer. Aborting.");
-    process.exit(1);
+    process.exit(2);
+}
+
+if (!signingUtils.getKeyStorePath()) {
+    console.log("WARNING: Cannot sign applications. Author.p12 file cannot be found at default location: " + signingUtils.getDefaultPath("author.p12"));
+}
+
+if (!signingUtils.getKeyStorePathBBID()) {
+
+    if (signingUtils.getCskPath() && signingUtils.getDbPath()) {
+        console.log('NOTE: BlackBerry ID tokens can now be used in place of your old signing keys. For more information on linking old signing keys with a BlackBerry ID token, please log in at http://developer.blackberry.com and click on Code Signing in the top menu bar.');
+    } else {
+        console.log('WARNING: Cannot sign applications. bbidtoken.csk file cannot be found at default location: ' + signingUtils.getDefaultPath("bbidtoken.csk"));
+    }
 }
 
 process.exit(0);

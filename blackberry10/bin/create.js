@@ -32,9 +32,9 @@ var build,
     version = getVersion(),
     project_path = validateProjectPath(),
     app_id = process.argv[3],
-    bar_name = process.argv[4],
     TARGETS = ["device", "simulator"],
     TEMPLATE_PROJECT_DIR = path.join(__dirname, "templates", "project"),
+    ROOT_PROJECT_DIR = path.join(__dirname, ".."),
     MODULES_PROJECT_DIR = path.join(__dirname, "..", "node_modules"),
     BOOTSTRAP_PROJECT_DIR = path.join(__dirname, "..", "framework", "bootstrap"),
     FRAMEWORK_LIB_PROJECT_DIR = path.join(__dirname, "..", "framework", "lib"),
@@ -63,16 +63,11 @@ function validPackageName(packageName) {
     return true;
 }
 
-function validBarName(barName) {
-    var barNameRegex = /^[a-zA-Z0-9._\-]+$/;
-    return (typeof barName === "undefined") || barNameRegex.test(barName);
-}
-
 function validateProjectPath() {
     if (!process.argv[2]) {
         console.log("You must give a project PATH");
         help();
-        process.exit(2); 
+        process.exit(2);
         return "";
     } else {
         return path.resolve(process.argv[2]);
@@ -86,14 +81,8 @@ function validate() {
         process.exit(2);
     }
     if (!validPackageName(app_id)) {
-        console.log("App ID must be sequence of alpha-numeric (optionally seperated by '.') characters, no longer than 50 characters");
-        help();
-        process.exit(2);
-    }
-    if (!validBarName(bar_name)) {
-        console.log("BAR filename can only contain alpha-numeric, '.', '-' and '_' characters");
-        help();
-        process.exit(2);
+        console.log("[warning] App ID must be sequence of alpha-numeric (optionally seperated by '.') characters, no longer than 50 characters.\n" +
+                    "special characters in '" + app_id + "' will be replaced by '_'");
     }
 }
 
@@ -112,7 +101,13 @@ function copyJavascript() {
 }
 
 function copyFilesToProject() {
-    var nodeModulesDest = path.join(project_path, "cordova", "node_modules");
+    var nodeModulesDest = path.join(project_path, "cordova", "node_modules"),
+        bbtoolsBinDest = path.join(project_path, "cordova", "dependencies", "bb-tools", "bin"),
+        bbtoolsLibDest = path.join(project_path, "cordova", "dependencies", "bb-tools", "lib"),
+        bbNativePackager = "blackberry-nativepackager",
+        bbSigner = "blackberry-signer",
+        bbDeploy = "blackberry-deploy",
+        bbDebugTokenRequest= "blackberry-debugtokenrequest";
 
     // create project using template directory
     wrench.mkdirSyncRecursive(project_path, 0777);
@@ -123,6 +118,25 @@ function copyFilesToProject() {
     utils.copyFile(path.join(BIN_DIR, "target.bat"), path.join(project_path, "cordova"));
     utils.copyFile(path.join(BIN_DIR, "lib", "target.js"), path.join(project_path, "cordova", "lib"));
     utils.copyFile(path.join(BIN_DIR, "lib", "utils.js"), path.join(project_path, "cordova", "lib"));
+    utils.copyFile(path.join(BIN_DIR, "lib", "signing-utils.js"), path.join(project_path, "cordova", "lib"));
+
+    // copy repo level init script to project
+    if (utils.isWindows()) {
+        utils.copyFile(path.join(BIN_DIR, "init.bat"), path.join(project_path, "cordova"));
+    } else {
+        utils.copyFile(path.join(BIN_DIR, "init"), path.join(project_path, "cordova"));
+    }
+
+    //copy VERSION file [used to identify corresponding ~/.cordova/lib directory for dependencies]
+    utils.copyFile(path.join(ROOT_PROJECT_DIR, "VERSION"), path.join(project_path));
+
+    // copy repo level check_reqs script to project
+    utils.copyFile(path.join(BIN_DIR, "check_reqs.js"), path.join(project_path, "cordova"));
+    if (utils.isWindows()) {
+        utils.copyFile(path.join(BIN_DIR, "check_reqs.bat"), path.join(project_path, "cordova"));
+    } else {
+        utils.copyFile(path.join(BIN_DIR, "check_reqs"), path.join(project_path, "cordova"));
+    }
 
     // change file permission for cordova scripts because ant copy doesn't preserve file permissions
     wrench.chmodSyncRecursive(path.join(project_path,"cordova"), 0700);
@@ -133,8 +147,6 @@ function copyFilesToProject() {
     //copy node modules to cordova build directory
     wrench.mkdirSyncRecursive(nodeModulesDest, 0777);
     wrench.copyDirSyncRecursive(MODULES_PROJECT_DIR, nodeModulesDest);
-    //change permissions of plugman
-    fs.chmodSync(path.join(nodeModulesDest, "plugman", "main.js"), 0755);
 
     //copy framework bootstrap
     TARGETS.forEach(function (target) {
@@ -161,22 +173,13 @@ function updateProject() {
         fs.writeFileSync(configXMLPath, xmlString.replace("default.app.id", app_id), "utf-8");
     }
 
-    if (typeof bar_name !== "undefined") {
-        projectJson.barName = bar_name;
-    }
-
     projectJson.globalFetchDir = path.join(__dirname, "..", "plugins");
 
     fs.writeFileSync(path.join(project_path, "project.json"), JSON.stringify(projectJson, null, 4) + "\n", "utf-8");
 }
 
-function installPlugins() {
-    var pluginScript = path.join(project_path, "cordova", "lib", "plugin.js");
-    require(pluginScript).add(path.join(__dirname, "..", "plugins"));
-}
-
 function help() {
-    console.log("\nUsage: create <project path> [package name [BAR filename]] \n");
+    console.log("\nUsage: create <project path> [package name] \n");
     console.log("Options: \n");
     console.log("   -h, --help      output usage information \n");
 }
@@ -190,7 +193,6 @@ if ( process.argv[2] === "-h" || process.argv[2] === "--help" ) {
         copyJavascript();
         copyFilesToProject();
         updateProject();
-        installPlugins();
         clean();
         process.exit();
     } catch (ex) {

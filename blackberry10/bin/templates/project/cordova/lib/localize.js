@@ -34,11 +34,8 @@ var Localize = require("localize"),
         "WARNING_SIGNING_PASSWORD_EXPECTED": {
             "en": "Build ID set in config.xml [version], but no signing password was provided [-g]. Bar will be unsigned"
         },
-        "EXCEPTION_MISSING_SIGNING_BUILDID": {
-            "en": "Cannot sign application - No buildId provided [--buildId]"
-        },
         "EXCEPTION_DEBUG_TOKEN_NOT_FOUND": {
-            "en": "Failed to find debug token"
+            "en": "Failed to find debug token. If you have an existing debug token, please copy it to %HOME%/.cordova/blackberry10debugtoken.bar. To generate a new debug token, execute the 'run' command."
         },
         "EXCEPTION_DEBUG_TOKEN_WRONG_FILE_EXTENSION": {
             "en": "Specified debug token not a .bar extension"
@@ -73,20 +70,20 @@ var Localize = require("localize"),
         "EXCEPTION_INVALID_ID": {
             "en": "Please enter an application id"
         },
-        "EXCEPTION_INVALID_CONTENT": {
-            "en": "Invalid config.xml - failed to parse the <content> element(Invalid source or the source is not specified.)"
-        },
         "EXCEPTION_INVALID_FEATURE_ID": {
             "en": "Invalid <feature> element - failed to find the id attribute"
         },
         "EXCEPTION_BUFFER_ERROR": {
             "en": "ERROR in bufferToString(): Buffer length must be even"
         },
-        "EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI": {
+        "EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI_OR_ORIGIN": {
             "en": "Invalid config.xml - no <feature> tags are allowed for this <access> element"
         },
         "EXCEPTION_INVALID_ACCESS_URI_NO_PROTOCOL": {
             "en": "Invalid URI attribute in the access element - protocol required($[1])"
+        },
+        "WARNING_URI_AND_ORIGIN_FOUND_IN_CONFIG": {
+            "en": "Invalid config.xml - <access> tags should have one of 'uri' or 'origin' attributes. 'origin' attribute will be ignored"
         },
         "EXCEPTION_INVALID_ACCESS_URI_NO_URN": {
             "en": "Failed to parse the URI attribute in the access element($[1])"
@@ -191,10 +188,13 @@ var Localize = require("localize"),
             "en": "No device PIN found, will omit debug token generation"
         },
         "WARN_NO_SIGNING_PASSWORD_PROVIDED": {
-            "en": "No signing password provided, will omit debug token generation"
+            "en": "No signing password provided, debug token cannot be generated. Please enter a value for 'keystorepass' in %HOME%/.cordova/blackberry10.json or use --keystorepass via command-line directly from the project cordova scripts."
         },
         "PROGRESS_GENERATING_DEBUG_TOKEN": {
             "en": "Generating debug token"
+        },
+        "WARN_RUN_DEVICE_OVERIDES_EMULATOR": {
+            "en": "Skipping emulator detection and detecting device. Please provide only 1 of --target, --device, and --emulator"
         }
 
     }, "", ""); // TODO maybe a bug in localize, must set default locale to "" in order get it to work

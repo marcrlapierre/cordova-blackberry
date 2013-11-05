@@ -16,6 +16,7 @@
 :: under the License.
 
 @ECHO OFF
+call "%~dp0..\init"
+if ERRORLEVEL 1 exit /B 1
 
-ECHO echo 'BlackBerry10: Not able to list connected devices through command-line at this time.'
-EXIT /B 1
+"%CORDOVA_NODE%\node.exe" "%~dps0\list-devices.js"

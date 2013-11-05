@@ -18,6 +18,7 @@ var childProcess = require("child_process"),
     fs = require("fs"),
     path = require("path"),
     util = require("util"),
+    utils = require("./utils"),
     data2xml = require("../third_party/data2xml/data2xml"),
     wrench = require("wrench"),
     conf = require("./conf"),
@@ -25,10 +26,14 @@ var childProcess = require("child_process"),
     localize = require("./localize"),
     pkgrUtils = require("./packager-utils"),
     i18nMgr = require("./i18n-manager"),
+    et = require("elementtree"),
+    xmlHelper = require("./xml-helpers"),
     NL = pkgrUtils.isWindows() ? "\r\n" : "\n";
 
 function generateTabletXMLFile(session, config) {
     var files = wrench.readdirSyncRecursive(session.sourceDir),
+        xmlData,
+        xmlDoc,
         xmlObject = {
             id : config.id,
             versionNumber : config.version,
@@ -185,8 +190,21 @@ function generateTabletXMLFile(session, config) {
     //Add auto orientation
     xmlObject.initialWindow.autoOrients = config.autoOrientation;
 
-    pkgrUtils.writeFile(session.sourceDir, conf.BAR_DESCRIPTOR, data2xml('qnx', xmlObject));
-}
+    xmlData = data2xml('qnx', xmlObject);
+
+    //Inject any config-file modifications for bar-descriptor.xml
+    if (config.configFileInjections && Array.isArray(config.configFileInjections)) {
+        xmlDoc = new et.ElementTree(et.XML(xmlData));
+        config.configFileInjections.forEach(function (config_file) {
+            if (config_file.attrib["parent"] && config_file.attrib["target"]  && config_file.attrib["target"] === "bar-descriptor.xml") {
+                xmlHelper.graftXML(xmlDoc, config_file._children, config_file.attrib["parent"]);
+            }
+        });
+        xmlData = xmlDoc.write({indent: 4});
+    }
+
+    pkgrUtils.writeFile(session.sourceDir, conf.BAR_DESCRIPTOR, xmlData);
+ }
 
 function generateOptionsFile(session, target, config) {
     var srcFiles = wrench.readdirSyncRecursive(session.sourceDir),
@@ -205,7 +223,7 @@ function generateOptionsFile(session, target, config) {
         }
     }
 
-    if (target === "device" && isSigning) {
+    if (target === "device" && isSigning && config.buildId) {
         optionsStr += "-buildId" + NL;
         optionsStr += config.buildId + NL;
     } else if (session.debug) {
@@ -246,7 +264,7 @@ function generateOptionsFile(session, target, config) {
 }
 
 function execNativePackager(session, callback) {
-    var script = "blackberry-nativepackager",
+    var script = path.join(process.env.CORDOVA_BBTOOLS, "blackberry-nativepackager"),
         cwd = session.sourceDir,
         nativePkgr;
 

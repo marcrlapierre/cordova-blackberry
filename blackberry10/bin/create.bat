@@ -17,15 +17,16 @@ goto comment
        specific language governing permissions and limitations
        under the License.
 :comment
-
 set BIN_DIR=%~dp0
 
-call "%BIN_DIR%check_reqs"
+call "%BIN_DIR%init"
+if ERRORLEVEL 1 exit /B 1
 
-if "%ERRORLEVEL%" == "1" exit /B 1
+if exist "%BIN_DIR%..\package.json" (
+    pushd %BIN_DIR%..
+    call "%CORDOVA_NODE%\npm" install
+    if ERRORLEVEL 1 exit /B 1
+    popd
+)
 
-pushd %BIN_DIR%..
-call npm install
-popd
-
-node.exe "%BIN_DIR%create.js" %*
+"%CORDOVA_NODE%\node" "%BIN_DIR%create.js" %*

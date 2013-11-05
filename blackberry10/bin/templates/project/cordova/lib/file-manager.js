@@ -27,7 +27,8 @@ var path = require("path"),
     CLIENT_JS = "client.js",
     SERVER_JS = "index.js",
     VALID_EXTENSIONS = [".js", ".json"],
-    CORDOVA_JS_REGEX = /(cordova-.+js)|cordova\.js/;
+    CORDOVA_JS_REGEX = /(cordova-.+js)|cordova\.js/,
+    MODULES_TO_KEEP = ["lib/utils.js", "lib/exception.js"];
 
 function unzip(from, to) {
     var data, entries, p, parent;
@@ -59,21 +60,18 @@ function unzip(from, to) {
 
 function copyDirContents(from, to) {
     var files = wrench.readdirSyncRecursive(from),
-        bbwpignore,
         bbwpignoreFile = path.join(from, conf.BBWP_IGNORE_FILENAME),
-        toBeIgnored = [];
+        bbwpignore,
+        ignoreFiles = conf.BBWP_IGNORE_FILENAME;
 
     if (fs.existsSync(bbwpignoreFile)) {
         bbwpignore = new BBWPignore(bbwpignoreFile, files);
-
-        bbwpignore.matchedFiles.forEach(function (i) {
-            toBeIgnored.push(from + "/" + i);
-        });
-        toBeIgnored.push(from + "/" + conf.BBWP_IGNORE_FILENAME); //add the .bbwpignore file to the ignore list
+        bbwpignore.matchedFiles.push(conf.BBWP_IGNORE_FILENAME); //add the .bbwpignore file to the ignore list
+        ignoreFiles = bbwpignore.matchedFiles.join("|");
     }
-    wrench.copyDirSyncRecursive(from, to, {preserve: true}, function (file) {
-        return toBeIgnored.indexOf(file) === -1;
-    });
+
+
+    wrench.copyDirSyncRecursive(from, to, {preserve: true, whitelist: false, filter: new RegExp(ignoreFiles, "g")});
 }
 
 function prepare(session) {
@@ -102,16 +100,14 @@ function getModulesArray(dest, files, baseDir) {
         EXCLUDE_FILES = ["client.js", "manifest.json"];
 
     function isExcluded(file) {
-        return EXCLUDE_FILES.some(function (element) {
-            return path.basename(file) === element;
-        });
+        return EXCLUDE_FILES.indexOf(path.basename(file)) !== -1 || !file.match(/\.(js|json)$/);
     }
 
     files.forEach(function (file) {
         file = path.resolve(baseDir, file);
 
         if (!fs.statSync(file).isDirectory()) {
-            if (baseDir !== dest.EXT || !isExcluded(file)) {
+            if (!isExcluded(file)) {
                 modulesList.push({name: path.relative(path.normalize(dest.CHROME), file).replace(/\\/g, "/"), file: file});
             }
         }
@@ -142,6 +138,10 @@ function generateFrameworkModulesJS(session) {
                       fs.readFileSync(module.file, "utf-8") + "\n" +
                       "});\n";
         frameworkModulesStr += "'" + module.name + "'" +  (index !== modulesList.length-1 ? ", " : "");
+        // Issue with 10.1 webplatform - requires certain files in chrome/lib
+        if (MODULES_TO_KEEP.indexOf(module.name) < 0) {
+            fs.unlinkSync(path.normalize(dest.CHROME + "/" + module.name));
+        }
     });
 
     modulesStr += "}());";

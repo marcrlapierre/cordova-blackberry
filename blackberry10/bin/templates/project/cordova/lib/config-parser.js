@@ -25,9 +25,10 @@ var fs = require("fs"),
     fileManager = require("./file-manager"),
     utils = require("./packager-utils"),
     i18nMgr = require("./i18n-manager"),
+    et = require("elementtree"),
+    _config_doc,
     _self,
-    _predefinedFeatures,
-    _hybridFeatures;
+    _predefinedFeatures;
 
 //This function will convert a wc3 paramObj with a list of
 //<param name="" value=""> elements into a single object
@@ -82,10 +83,6 @@ function processFeatures(featuresArray, widgetConfig, processPredefinedFeatures)
                         _predefinedFeatures[attribs.id](feature, widgetConfig);
                     }
                 } else {
-                    //Handle features that contain both a namespace and custom params
-                    if (_hybridFeatures[attribs.id]) {
-                        _hybridFeatures[attribs.id](feature, widgetConfig);
-                    }
                     features.push(attribs);
                 }
             } else {
@@ -97,9 +94,9 @@ function processFeatures(featuresArray, widgetConfig, processPredefinedFeatures)
     return features;
 }
 
-function createAccessListObj(uri, allowSubDomain) {
+function createAccessListObj(uriOrOrigin, allowSubDomain) {
     return {
-        uri: uri,
+        uri: uriOrOrigin,
         allowSubDomain: allowSubDomain
     };
 }
@@ -124,7 +121,11 @@ function processBuildID(widgetConfig, session) {
 }
 
 function processWidgetData(data, widgetConfig, session) {
-    var attribs, featureArray, header;
+    var attribs,
+        featureArray,
+        uriExist,
+        originExist,
+        header;
 
     if (data["@"]) {
         widgetConfig.version = data["@"].version;
@@ -169,19 +170,41 @@ function processWidgetData(data, widgetConfig, session) {
             data.access = [data.access];
         }
 
+        //check if uri and origin attributes are used
+        data.access.forEach(function (accessElement, accessIndex) {
+            attribs = accessElement["@"];
+
+            if (attribs) {
+                if (attribs.uri) {
+                    uriExist = true;
+                }
+                if (attribs.origin) {
+                    originExist = true;
+                }
+            }
+        });
+        if (uriExist === true && originExist === true) {
+            logger.warn(localize.translate("WARNING_URI_AND_ORIGIN_FOUND_IN_CONFIG"));
+        }
+
         data.access.forEach(function (accessElement) {
             attribs = accessElement["@"];
 
             if (attribs) {
-                if (attribs.uri === "*") {
+                if (attribs.uri === "*" || attribs.origin === "*") {
                     if (accessElement.feature) {
-                        throw localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI");
+                        throw localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI_OR_ORIGIN");
                     }
-
                     widgetConfig.hasMultiAccess = true;
                 } else {
                     attribs.subdomains = packagerUtils.toBoolean(attribs.subdomains);
-                    widgetConfig.accessList.push(createAccessListObj(attribs.uri, attribs.subdomains));
+                    if (attribs.uri || attribs.origin) {
+                        if (uriExist === true && originExist === true) {
+                            widgetConfig.accessList.push(createAccessListObj(attribs.uri, attribs.subdomains)); //using uri attribute by default
+                        } else {
+                            widgetConfig.accessList.push(createAccessListObj(attribs.uri || attribs.origin, attribs.subdomains));
+                        }
+                    }
                 }
             }
         });
@@ -408,9 +431,6 @@ function validateConfig(widgetConfig) {
 
     check(widgetConfig.author, localize.translate("EXCEPTION_INVALID_AUTHOR")).notNull();
     check(widgetConfig.id, localize.translate("EXCEPTION_INVALID_ID")).notNull().notEmpty();
-    check(widgetConfig.content, localize.translate("EXCEPTION_INVALID_CONTENT"))
-        .notNull()
-        .notEmpty();
 
     validateSplashScreensIcon(widgetConfig, "rim:splash");
 
@@ -518,9 +538,67 @@ function processNameAndDescription(data, widgetConfig) {
 
 function processCordovaPreferences(data, widgetConfig) {
     if (data.preference) {
-        var preference = processParamObj(data.preference);
-        widgetConfig.packageCordovaJs = preference.packageCordovaJs === "enable";
-        widgetConfig.autoHideSplashScreen = preference.AutoHideSplashScreen !== "false";
+        var preference = JSON.parse(JSON.stringify(processParamObj(data.preference)).toLowerCase()),
+            hideFormControl = preference.hidekeyboardformaccessorybar;
+
+        widgetConfig.packageCordovaJs = preference.packagecordovajs === "enable";
+        widgetConfig.autoHideSplashScreen = preference.autohidesplashscreen !== "false";
+
+        // <preference name="backgroundColor" value="hex" />
+        if (preference.backgroundcolor) {
+            widgetConfig.backgroundColor = processBgColor(preference.backgroundcolor);
+        }
+
+        // <preference name="childBrowser" value="enable or disable" />
+        if (preference.childbrowser) {
+            widgetConfig.enableChildWebView = (preference.childbrowser === 'disable') === false;
+        }
+
+        // <preference name="HideKeyboardFormAccessoryBar" value="enable/true or disable/false" />
+        if (preference.hidekeyboardformaccessorybar) {
+            widgetConfig.enableFormControl = (hideFormControl !== 'enable' ) && (hideFormControl !== 'true');
+        }
+
+        // <preference name="popupBlocker" value="enable or disable" />
+        if (preference.popupblocker) {
+            widgetConfig.enablePopupBlocker = (preference.popupblocker === 'enable') === true;
+        }
+
+        // <preference name="orientation" value="portrait, landscape, north, auto or default" />
+        if (preference.orientation) {
+            if (preference.orientation ===  "landscape" || preference.orientation === "portrait" || preference.orientation === "north") {
+                widgetConfig.autoOrientation = false;
+                widgetConfig.orientation = preference.orientation;
+            } else if (preference.orientation !== "auto" && preference.orientation !== "default") {
+                throw localize.translate("EXCEPTION_INVALID_ORIENTATION_MODE", preference.orientation);
+            }
+        }
+
+        // <preference name="theme" value="bright, dark, inherit or default" />
+        if (preference.theme && (typeof preference.theme === "string")) {
+            if (preference.theme ===  "bright" || preference.theme === "dark" || preference.theme === "inherit" || preference.theme ===  "default") {
+                widgetConfig.theme = preference.theme;
+            }
+        }
+
+        // <preference name="webSecurity" value="enable or disable" />
+        if (preference.websecurity && (typeof preference.websecurity === "string") && (preference.websecurity === "disable")) {
+            widgetConfig.enableWebSecurity = false;
+            logger.warn(localize.translate("WARNING_WEBSECURITY_DISABLED"));
+        }
+
+    }
+}
+
+function processBgColor(bgColor) {
+    //convert bgColor to a number
+    bgColorNum = parseInt(bgColor, 16);
+
+    if (isNaN(bgColorNum)) {
+        //bgColor is not a number, throw error
+        throw localize.translate("EXCEPTION_BGCOLOR_INVALID", bgColor);
+    } else {
+        return bgColorNum;
     }
 }
 
@@ -548,6 +626,9 @@ function processResult(data, session) {
 
     //if --buildId was specified, it takes precedence
     processBuildID(widgetConfig, session);
+
+    //store any config-file element injections
+    widgetConfig.configFileInjections = _config_doc.findall("config-file");
 
     return widgetConfig;
 }
@@ -579,68 +660,6 @@ function init() {
             }
         }
     };
-
-    //Hybrid features are features that have both an API namespace and custom parameters
-    _hybridFeatures = {
-        "blackberry.app": function (feature, widgetConfig) {
-            if (feature) {
-                var params = processParamObj(feature.param),
-                    bgColor = params.backgroundColor,
-                    childBrowser = params.childBrowser,
-                    formControl = params.formControl,
-                    orientation = params.orientation,
-                    theme = params.theme,
-                    popupBlocker = params.popupBlocker,
-                    websecurity = params.websecurity;
-
-                if (bgColor) {
-                    //Convert bgColor to a number
-                    bgColor = parseInt(bgColor, 16);
-
-                    if (isNaN(bgColor)) {
-                        //bgcolor is not a number, throw error
-                        throw localize.translate("EXCEPTION_BGCOLOR_INVALID", params.backgroundColor);
-                    } else {
-                        widgetConfig.backgroundColor = bgColor;
-                    }
-                }
-
-                if (childBrowser) {
-                    widgetConfig.enableChildWebView = ((childBrowser + '').toLowerCase() === 'disable') === false;
-                }
-
-                if (formControl) {
-                    widgetConfig.enableFormControl = ((formControl + '').toLowerCase() === 'disable') === false;
-                }
-
-                if (popupBlocker) {
-                    widgetConfig.enablePopupBlocker = ((popupBlocker + '').toLowerCase() === 'enable') === true;
-                }
-
-                if (orientation) {
-                    if (orientation ===  "landscape" || orientation === "portrait" || orientation === "north") {
-                        widgetConfig.autoOrientation = false;
-                        widgetConfig.orientation = orientation;
-                    } else if (orientation !== "auto") {
-                        throw localize.translate("EXCEPTION_INVALID_ORIENTATION_MODE", orientation);
-                    }
-                }
-
-                if (theme && (typeof theme === "string")) {
-                    theme = theme.toLowerCase();
-
-                    if (theme ===  "bright" || theme === "dark" || theme === "inherit" || theme ===  "default") {
-                        widgetConfig.theme = theme;
-                    }
-                }
-
-                if (websecurity && (typeof websecurity === "string") && (websecurity.toLowerCase() === "disable")) {
-                    widgetConfig.enableWebSecurity = false;
-                    logger.warn(localize.translate("WARNING_WEBSECURITY_DISABLED"));
-                }
-            }
-        }
-    };
 }
 
 _self = {
@@ -652,6 +671,9 @@ _self = {
         var fileData = fs.readFileSync(xmlPath),
             xml = utils.bufferToString(fileData),
             parser = new xml2js.Parser({trim: true, normalize: true, explicitRoot: false});
+
+        //Used for config-file injections
+        _config_doc = new et.ElementTree(et.XML(xml));
 
         init();
 

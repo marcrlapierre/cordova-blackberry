@@ -12,6 +12,8 @@ var testData = require("./test-data"),
     fs = require("fs"),
     session = testData.session,
     configPath = path.resolve("bin/test/cordova/unit/config.xml"),
+    configPathUri = path.resolve("bin/test/cordova/unit/configUri.xml"),
+    configPathUriOrigin = path.resolve("bin/test/cordova/unit/configUriOrigin.xml"),
     configBadPath = path.resolve("test2/config.xml"),
     configBareMinimumPath = path.resolve("bin/test/cordova/unit/config-bare-minimum.xml"),
     mockParsing = testUtilities.mockParsing;
@@ -48,7 +50,6 @@ describe("config parser", function () {
             expect(configObj.permissions).toContain('read_geolocation');
             expect(configObj.permissions).toContain('use_camera');
             expect(configObj.enableChildWebView).toBe(false);
-            expect(configObj.enableChildWebView).toBe(false);
         });
     });
 
@@ -56,12 +57,11 @@ describe("config parser", function () {
         var localAccessList,
             accessListFeature;
 
-        configParser.parse(configPath, session, function (configObj) {
+        configParser.parse(configPathUri, session, function (configObj) {
             //validate WIDGET_LOCAL accessList
-            localAccessList = testUtilities.getAccessListForUri(configObj.accessList, "WIDGET_LOCAL");
+            localAccessList = testUtilities.getAccessList(configObj.accessList, "WIDGET_LOCAL");
             expect(localAccessList).toBeDefined();
             expect(localAccessList.uri).toEqual("WIDGET_LOCAL");
-            expect(localAccessList.allowSubDomain).toEqual(true);
         });
     });
 
@@ -69,9 +69,9 @@ describe("config parser", function () {
         var customAccessList,
             accessListFeature;
 
-        configParser.parse(configPath, session, function (configObj) {
+        configParser.parse(configPathUri, session, function (configObj) {
             //validate http://www.somedomain1.com accessList
-            customAccessList = testUtilities.getAccessListForUri(configObj.accessList, "http://www.somedomain1.com");
+            customAccessList = testUtilities.getAccessList(configObj.accessList, "http://www.somedomain1.com");
             expect(customAccessList).toBeDefined();
             expect(customAccessList.uri).toEqual("http://www.somedomain1.com");
             expect(customAccessList.allowSubDomain).toEqual(true);
@@ -101,7 +101,6 @@ describe("config parser", function () {
         data["@"].id = undefined;
 
         mockParsing(data);
-
         //Should throw an EXCEPTION_INVALID_ID error
         expect(function () {
             configParser.parse(configPath, session, {});
@@ -134,7 +133,7 @@ describe("config parser", function () {
     it("Fails when no name was provided - multiple elements", function () {
         var data = testUtilities.cloneObj(testData.xml2jsConfig);
         data.name = ["",
-            { '#': 'API Smoke Test-FR', '@': { 'xml:lang': 'fr' } },
+            { '#': 'API Smoke Test-FR', '@': { 'xml:lang': 'fr' } }
         ];
 
         mockParsing(data);
@@ -147,7 +146,7 @@ describe("config parser", function () {
     it("Fails when localized name was provided but empty", function () {
         var data = testUtilities.cloneObj(testData.xml2jsConfig);
         data.name = ["API Smoke Test",
-            { '#': '', '@': { 'xml:lang': 'fr' } },
+            { '#': '', '@': { 'xml:lang': 'fr' } }
         ];
 
         mockParsing(data);
@@ -207,7 +206,7 @@ describe("config parser", function () {
     it("Fails when localized name was provided but empty", function () {
         var data = testUtilities.cloneObj(testData.xml2jsConfig);
         data.name = ['API Smoke Test',
-            { '#': '', '@': { 'xml:lang': 'fr' } },
+            { '#': '', '@': { 'xml:lang': 'fr' } }
         ];
 
         mockParsing(data);
@@ -262,17 +261,6 @@ describe("config parser", function () {
         configParser.parse(configPath, session, function (configObj) {
             expect(configObj.description).toEqual({"default": "This is my app", "en": "EN VALUE", "fr": "FR VALUE"});
         });
-    });
-
-    it("Fails when missing content error is not shown", function () {
-        var data = testUtilities.cloneObj(testData.xml2jsConfig);
-        data.content = "";
-
-        mockParsing(data);
-
-        expect(function () {
-            configParser.parse(configPath, session, {});
-        }).toThrow(localize.translate("EXCEPTION_INVALID_CONTENT"));
     });
 
     it("adds local:/// protocol to urls", function () {
@@ -454,6 +442,11 @@ describe("config parser", function () {
         }).not.toThrow();
     });
 
+    it("throws a warning when both uri and origin attributes exist", function () {
+        configParser.parse(configPathUriOrigin, session, function (configObj) {});
+        expect(logger.warn).toHaveBeenCalled();
+    });
+
     it("multi access should be false if no access", function () {
         var data = testUtilities.cloneObj(testData.xml2jsConfig);
 
@@ -472,6 +465,24 @@ describe("config parser", function () {
     it("multi access should be false if no uri is equal to *", function () {
         var data = testUtilities.cloneObj(testData.xml2jsConfig);
         data['access'] = {"@" : {"uri" : "http://www.somedomain1.com"}};
+
+        mockParsing(data);
+
+        configParser.parse(configPath, session, function (configObj) {
+            //hasMultiAccess was set to false
+            expect(configObj.hasMultiAccess).toEqual(false);
+            expect(configObj.accessList).toEqual([ {
+                uri : 'WIDGET_LOCAL',
+                allowSubDomain : true
+            }, {
+                "uri" : "http://www.somedomain1.com"
+            } ]);
+        });
+    });
+
+    it("multi access should be false if no origin is equal to *", function () {
+        var data = testUtilities.cloneObj(testData.xml2jsConfig);
+        data['access'] = {"@" : {"origin" : "http://www.somedomain1.com"}};
 
         mockParsing(data);
 
@@ -529,7 +540,7 @@ describe("config parser", function () {
 
         expect(function () {
             configParser.parse(configPath, session, function (configObj) {});
-        }).toThrow(localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI"));
+        }).toThrow(localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI_OR_ORIGIN"));
     });
 
     it("should fail when multi features are defined with the uri being equal to *", function () {
@@ -540,7 +551,7 @@ describe("config parser", function () {
 
         expect(function () {
             configParser.parse(configPath, session, function (configObj) {});
-        }).toThrow(localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI"));
+        }).toThrow(localize.translate("EXCEPTION_FEATURE_DEFINED_WITH_WILDCARD_ACCESS_URI_OR_ORIGIN"));
     });
 
     it("should fail when the access uri attribute does not specify a protocol", function () {
@@ -1083,8 +1094,7 @@ describe("config parser", function () {
 
         it("sets orientation to landscape when specified", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            data['feature'] = { '@': { id: 'blackberry.app', required: true },
-                param: { '@': { name: 'orientation', value: 'landscape' } } };
+            data['preference'] = { '@': { name: 'orientation', value: 'landscape' } };
 
             mockParsing(data);
 
@@ -1096,8 +1106,7 @@ describe("config parser", function () {
 
         it("sets orientation to portrait when specified", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            data['feature'] = { '@': { id: 'blackberry.app', required: true },
-                param: { '@': { name: 'orientation', value: 'portrait' } } };
+            data['preference'] = { '@': { name: 'orientation', value: 'portrait' } };
 
             mockParsing(data);
 
@@ -1109,13 +1118,47 @@ describe("config parser", function () {
 
         it("sets auto orientation to true by default", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            delete data["feature"];//Remove any orientation data
+            delete data['preference'];//Remove any orientation data
 
             mockParsing(data);
 
             configParser.parse(configPath, session, function (configObj) {
                 expect(configObj.autoOrientation).toEqual(true);
             });
+        });
+
+        it("orientation remains auto when auto is specified", function () {
+            var data = testUtilities.cloneObj(testData.xml2jsConfig);
+            data['preference'] = { '@': { name: 'orientation', value: 'auto' } };
+
+            mockParsing(data);
+
+            configParser.parse(configPath, session, function (configObj) {
+                expect(configObj.autoOrientation).toEqual(true);
+            });
+        });
+
+        it("orientation remains auto when default is specified", function () {
+            var data = testUtilities.cloneObj(testData.xml2jsConfig);
+            data['preference'] = { '@': { name: 'orientation', value: 'default' } };
+
+            mockParsing(data);
+
+            configParser.parse(configPath, session, function (configObj) {
+                expect(configObj.autoOrientation).toEqual(true);
+            });
+        });
+
+        it("throws an error when preference.orientation value is invalid", function () {
+            var data = testUtilities.cloneObj(testData.xml2jsConfig);
+            data['preference'] = { '@': { name: 'orientation', value: 'invalid' } };
+
+            mockParsing(data);
+
+            expect(function () {
+                configParser.parse(configPath, session, function (configObj) {});
+            }).toThrow(localize.translate("EXCEPTION_INVALID_ORIENTATION_MODE", "invalid"));
+
         });
 
         it("throws a warning when blackberry.app.orientation exists", function () {
@@ -1131,21 +1174,18 @@ describe("config parser", function () {
 
         it("throws an error when blackberry.app orientation exists with an invalid mode param", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            data['feature'] = { '@': { id: 'blackberry.app', required: true },
-                param: { '@': { name: 'orientation', value: 'notAValidMode' } } };
+            data['preference'] = { '@': { name: 'orientation', value: 'notAValidMode' } };
 
             mockParsing(data);
 
-            //Should throw an EXCEPTION_INVALID_ORIENTATION_MODE error
             expect(function () {
                 configParser.parse(configPath, session, function (configObj) {});
-            }).toThrow(localize.translate("EXCEPTION_INVALID_ORIENTATION_MODE", "notAValidMode"));
+            }).toThrow(localize.translate("EXCEPTION_INVALID_ORIENTATION_MODE", "notavalidmode"));
         });
 
-        it("sets backgroundColor when specified via blackberry.app namespace", function () {
+        it("sets backgroundColor when specified as a preference", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            data['feature'] = { '@': { id: 'blackberry.app', required: true },
-                param: { '@': { name: 'backgroundColor', value: '0xffffff' } } };
+            data['preference'] = { '@': {name: 'backgroundColor', value: '0xffffff' } };
 
             mockParsing(data);
 
@@ -1154,21 +1194,21 @@ describe("config parser", function () {
             });
         });
 
-        it("throws an error when blackberry.app backgroundColor param is not a number", function () {
+        it("throws an error backgroundColor preference is not a number", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
-            data['feature'] = { '@': { id: 'blackberry.app', required: true },
-                param: { '@': { name: 'backgroundColor', value: '$UI*@@$' } } };
+            data['preference'] = { '@': { name: 'backgroundColor', value: '$UI*@@$' } };
 
             mockParsing(data);
 
             //Should throw an EXCEPTION_BGCOLOR_INVALID error
             expect(function () {
                 configParser.parse(configPath, session, {});
-            }).toThrow(localize.translate("EXCEPTION_BGCOLOR_INVALID", "$UI*@@$"));
+            }).toThrow(localize.translate("EXCEPTION_BGCOLOR_INVALID", "$ui*@@$"));
         });
 
         it("can properly parse the custom RIM-Wiget:rim/wiget element", function () {
             var data = testUtilities.cloneObj(testData.xml2jsConfig);
+
             mockParsing(data);
 
             configParser.parse(configPath, session, function (configObj) {
@@ -1212,15 +1252,9 @@ describe("config parser", function () {
         });
 
         describe('disabling childBrowser (childWebView)', function () {
-
-            // { '@': { id: 'blackberry.app', required: true, version: '1.0.0.0' },
-            //   param: { '@': { name: 'childBrowser', value: 'disable' } } }
-
-
             it("sets enableChildWebView to true when childBrowser value is enable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data['feature'] = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'childBrowser', value: 'enable' } } };
+                data['preference'] = { '@': { name: 'childBrowser', value: 'enable' } };
 
                 mockParsing(data);
 
@@ -1231,8 +1265,7 @@ describe("config parser", function () {
 
             it("sets enableChildWebView to false when value is disable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data['feature'] = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'childBrowser', value: 'disable' } } };
+                data['preference'] = { '@': { name: 'childBrowser', value: 'disable' } };
 
                 mockParsing(data);
 
@@ -1243,11 +1276,9 @@ describe("config parser", function () {
         });
 
         describe('disabling formcontrol', function () {
-
-            it("sets enableFormControl to true when formControl value is enable", function () {
+            it("sets enableFormControl to true when HideKeyboardFormAccessoryBar value is disable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data['feature'] = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'formControl', value: 'enable' } } };
+                data['preference'] = { '@': { name: 'HideKeyboardFormAccessoryBar', value: 'disable'  } };
 
                 mockParsing(data);
 
@@ -1256,10 +1287,31 @@ describe("config parser", function () {
                 });
             });
 
-            it("sets enableFormControl to false when value is disable", function () {
+            it("sets enableFormControl to true when HideKeyboardFormAccessoryBar value is false", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data['feature'] = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'formControl', value: 'disable' } } };
+                data['preference'] = { '@': { name: 'HideKeyboardFormAccessoryBar', value: 'false'  } };
+
+                mockParsing(data);
+
+                configParser.parse(configPath, session, function (configObj) {
+                    expect(configObj.enableFormControl).toBe(true);
+                });
+            });
+
+            it("sets enableFormControl to false when value is enable", function () {
+                var data = testUtilities.cloneObj(testData.xml2jsConfig);
+                data['preference'] = { '@': { name: 'HideKeyboardFormAccessoryBar', value: 'enable' } };
+
+                mockParsing(data);
+
+                configParser.parse(configPath, session, function (configObj) {
+                    expect(configObj.enableFormControl).toBe(false);
+                });
+            });
+
+            it("sets enableFormControl to false when value is true", function () {
+                var data = testUtilities.cloneObj(testData.xml2jsConfig);
+                data['preference'] = { '@': { name: 'HideKeyboardFormAccessoryBar', value: 'true' } };
 
                 mockParsing(data);
 
@@ -1274,8 +1326,7 @@ describe("config parser", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
 
                 if (themeInConfig) {
-                    data['feature'] = { '@': { id: 'blackberry.app' },
-                        param: { '@': { name: 'theme', value: themeInConfig } } };
+                    data['preference'] = { '@': { name: 'theme', value: themeInConfig } };
 
                     mockParsing(data);
                 }
@@ -1333,15 +1384,9 @@ describe("config parser", function () {
         });
 
         describe('disabling WebSecurity', function () {
-
-            // { '@': { id: 'blackberry.app', required: true, version: '1.0.0.0' },
-            //   param: { '@': { name: 'childBrowser', value: 'disable' } } }
-
-
             it("doesn't set enableWebSecurity to anything when param value is anything but disable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data.feature = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'websecurity', value: (new Date()).toString() } } };
+                data['preference'] = { '@': { name: 'webSecurity', value: (new Date()).toString() } };
 
                 mockParsing(data);
 
@@ -1353,8 +1398,7 @@ describe("config parser", function () {
 
             it("sets enableWebSecurity to false when value is disable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data.feature = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'websecurity', value: 'disable' } } };
+                data['preference'] = { '@': { name: 'webSecurity', value: 'disable' } };
 
                 mockParsing(data);
 
@@ -1366,8 +1410,7 @@ describe("config parser", function () {
 
             it("sets enableWebSecurity to false when value is disable case insensitive", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data.feature = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'websecurity', value: 'DisAble' } } };
+                data['preference'] = { '@': { name: 'webSecurity', value: 'DisAble' } };
 
                 mockParsing(data);
 
@@ -1379,14 +1422,9 @@ describe("config parser", function () {
         });
 
         describe('enabling popupBlocker', function () {
-
-            // { '@': { id: 'blackberry.app', required: true, version: '1.0.0.0' },
-            //   param: { '@': { name: 'childBrowser', value: 'disable' } } }
-
-            it("sets enableWebSecurity to false when value is disable", function () {
+            it("sets enablePopupBlocker to true when value is enable", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data.feature = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'popupBlocker', value: 'enable' } } };
+                data['preference'] = { '@': { name: 'popupBlocker', value: 'enable' } };
 
                 mockParsing(data);
 
@@ -1395,15 +1433,14 @@ describe("config parser", function () {
                 });
             });
 
-            it("sets enableWebSecurity to false when value is disable case insensitive", function () {
+            it("sets enablePopBlocker to false when value is disable case insensitive", function () {
                 var data = testUtilities.cloneObj(testData.xml2jsConfig);
-                data.feature = { '@': { id: 'blackberry.app' },
-                    param: { '@': { name: 'popupBlocker', value: 'EnAbLe' } } };
+                data['preference'] = { '@': { name: 'popupBlocker', value: 'Disable' } };
 
                 mockParsing(data);
 
                 configParser.parse(configPath, session, function (configObj) {
-                    expect(configObj.enablePopupBlocker).toBe(true);
+                    expect(configObj.enablePopupBlocker).toBe(false);
                 });
             });
         });

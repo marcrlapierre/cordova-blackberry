@@ -16,9 +16,12 @@
 
 var fs = require('fs'),
     path = require('path'),
+    childProcess = require('child_process'),
     wrench = require('wrench'),
     localize = require("./localize"),
     os = require('os'),
+    prompt = require("prompt"),
+    DEFAULT_BAR_NAME = "bb10app",
     PROPERTY_FILE_NAME = 'blackberry10.json',
     CORDOVA_DIR = '.cordova',
     DEFAULT_PROPERTY_FILE = {
@@ -93,8 +96,46 @@ _self = {
         return filteredFiles;
     },
 
+    readdirSyncRecursive: function (baseDir) {
+        var files = [],
+            curFiles = [],
+            nextDirs,
+            isDir = function (f) {
+                return fs.statSync(f).isDirectory();
+            },
+            isFile = function (f) {
+                return !isDir(f);
+            },
+            prependBaseDir = function (fname) {
+                return path.join(baseDir, fname);
+            };
+
+        try {
+            curFiles = fs.readdirSync(baseDir);
+
+            if (curFiles && curFiles.length > 0) {
+                curFiles = curFiles.map(prependBaseDir);
+                nextDirs = curFiles.filter(isDir);
+                curFiles = curFiles.filter(isFile);
+
+                files = files.concat(curFiles);
+
+                while (nextDirs.length) {
+                    files = files.concat(_self.readdirSyncRecursive(nextDirs.shift()));
+                }
+            }
+        } catch (e) {
+        }
+
+        return files;
+    },
+
     isWindows: function () {
         return os.type().toLowerCase().indexOf("windows") >= 0;
+    },
+
+    isOSX: function () {
+        return os.type().toLowerCase().indexOf("darwin") >= 0;
     },
 
     isArray: function (obj) {
@@ -165,12 +206,69 @@ _self = {
         }
     },
 
+    inQuotes : function (property) {
+        //wrap in quotes if it's not already wrapped
+        if (property.indexOf("\"") === -1) {
+            return "\"" + property + "\"";
+        } else {
+            return property;
+        }
+    },
+
+    exec : function (command, args, options, callback) {
+        //Optional params handling [args, options]
+        if (typeof args === "Object" && !Array.isArray(args)) {
+            callback = options;
+            options = args;
+            args = [];
+        } else if (typeof args === "function"){
+            callback = args;
+            options = {};
+            args = [];
+        } else if (typeof options === "function"){
+            callback = options;
+            options = {};
+        }
+
+        //insert executable portion at begining of arg array
+        args.splice(0, 0, command);
+
+        var pkgrUtils = require("./packager-utils"),
+            customOptions = options._customOptions,
+            proc,
+            i;
+
+        for (i = 0; i < args.length; i++) {
+            if (args[i] && args[i].indexOf(" ") !== -1) {
+                if (!_self.isWindows()) {
+                    //remove any escaped spaces on non-Windows platforms and simply use quotes
+                    args[i] = args[i].replace(/\\ /g, " ");
+                }
+
+                //put any args with spaces in quotes
+                args[i] = _self.inQuotes(args[i]);
+            }
+        };
+
+        //delete _customOptions from options object before sending to exec
+        delete options._customOptions;
+        //Use the process env by default
+        options.env = options.env || process.env;
+
+        proc = childProcess.exec(args.join(" "), options, callback);
+
+        if (!customOptions || !customOptions.silent) {
+            proc.stdout.on("data", pkgrUtils.handleProcessOutput);
+            proc.stderr.on("data", pkgrUtils.handleProcessOutput);
+        }
+    },
+
     loadModule: function (path) {
         return require(path);
     },
 
     findHomePath : function () {
-        return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+        return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
     },
 
     getCordovaDir: function () {
@@ -206,6 +304,48 @@ _self = {
             propertiesFile = path.join(_self.getCordovaDir(), PROPERTY_FILE_NAME);
 
         fs.writeFileSync(propertiesFile, contents, 'utf-8');
+    },
+
+    genBarName: function () {
+        return DEFAULT_BAR_NAME;
+    },
+
+    clone: function (original) {
+        var clone = {};
+        if (typeof original !== "object") {
+            clone = original;
+        } else if (Array.isArray(original)) {
+            clone =original.slice();
+        } else {
+            for (var prop in original) {
+                clone[prop] = original[prop];
+            }
+        }
+
+        return clone;
+    },
+    prompt: function (options, done) {
+        var promptSchema = {
+                properties: {
+                    "property": options
+                }
+            };
+        prompt.start();
+        prompt.colors = false;
+        prompt.message = "";
+        prompt.delimiter = "";
+        prompt.get(promptSchema, function (err, results) {
+            done(err, results.property);
+        });
+    },
+
+    mixin: function (mixin, to) {
+        Object.getOwnPropertyNames(mixin).forEach(function (prop) {
+            if (Object.hasOwnProperty.call(mixin, prop)) {
+                Object.defineProperty(to, prop, Object.getOwnPropertyDescriptor(mixin, prop));
+            }
+        });
+        return to;
     }
 
 };
