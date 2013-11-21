@@ -433,6 +433,14 @@ JNEXT.JPLAYER_ = function()
 	self.repeat = function(repeatMode) {
 		return invoke('repeat', { repeatMode: repeatMode });
 	};
+	/**
+	 * Set the debug verbosity for jPlayer
+	 * @param {Number} verbosity The verbosity level
+	 * @returns {Boolean} True if the call was successful, False if not.
+	 */
+	self.setDebugVerbosity = function(verbosity) {
+		return invoke('setDebugVerbosity', { verbosity: verbosity });
+	};
 
 	/**
 	 * JNEXT interface method responsible for routing plugin events.
