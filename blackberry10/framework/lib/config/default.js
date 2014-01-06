@@ -78,7 +78,7 @@ module.exports = {
     enableChildWebView: true,
     enableWebSecurity: true,
     enablePopupBlocker: false,
-
-    backgroundColor: 0x00FFFFFF
+    backgroundColor: 0x00FFFFFF,
+    enableDiskCache: false,
 
 };
