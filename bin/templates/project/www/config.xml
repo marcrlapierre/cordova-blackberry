@@ -27,9 +27,8 @@
 	version="1.0.0.1" id="default.app.id">
   <rim:permissions>
 
-  <name>default.app.id</name>
-
   </rim:permissions>
+  <name>default.app.id</name>
 
   <author>Your Name Here</author>
 
