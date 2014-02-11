@@ -176,7 +176,8 @@ function updateProject() {
 
     if (typeof app_id !== "undefined") {
         xmlString = fs.readFileSync(configXMLPath, "utf-8");
-        fs.writeFileSync(configXMLPath, xmlString.replace("default.app.id", app_id).replace("default.app.name", app_name), "utf-8");
+        fs.writeFileSync(configXMLPath, xmlString.replace(/default\.app\.id/g, app_id), "utf-8");
+
     }
 }
 
