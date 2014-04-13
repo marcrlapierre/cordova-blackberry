@@ -22,7 +22,6 @@ var fs = require('fs'),
     path = require('path'),
     childProcess = require('child_process'),
     wrench = require('wrench'),
-    localize = require("./localize"),
     os = require('os'),
     DEFAULT_BAR_NAME = "qnxcarapp",
     promptLib = require("prompt"),
@@ -41,7 +40,7 @@ function swapBytes(buffer) {
         a;
 
     if (l % 2 === 0x01) {
-        throw localize.translate("EXCEPTION_BUFFER_ERROR");
+        throw new Exception("Buffer error");
     }
 
     for (i = 0; i < l; i += 2) {
