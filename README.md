@@ -98,8 +98,6 @@ TBD
 
 Your application should now show up in the App Section, which is the last tab on the bottom right of the screen. You can now scroll through the application list to find your application. Tap the application icon once to start it. 
 
-
-
 Adding and managing plugins
 ---------------------------
 
