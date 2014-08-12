@@ -16,7 +16,9 @@
 
 var CHROME_HEIGHT = 0,
     webview,
-    _webviewObj;
+    _webviewObj,
+    VIEWPORT_WIDTH = window.qnx.webplatform.getApplication().getEnv("WIDTH") || screen.width,
+    VIEWPORT_HEIGHT = window.qnx.webplatform.getApplication().getEnv("HEIGHT") || screen.height;
 
 webview =
     {
@@ -28,7 +30,7 @@ webview =
             _webviewObj.active = true;
             _webviewObj.zOrder = 2;
             _webviewObj.enableCrossSiteXHR = true;
-            _webviewObj.setGeometry(0, 0, screen.width, screen.height);
+            _webviewObj.setGeometry(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
             _webviewObj.addEventListener("DocumentLoadFinished", function () {
                 _webviewObj.default.setDefaultFont();
                 _webviewObj.visible = true;

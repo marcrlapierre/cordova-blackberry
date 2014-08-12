@@ -20,6 +20,8 @@ var networkResourceRequested = require('./webkitHandlers/networkResourceRequeste
     webkitOriginAccess = require("./policy/webkitOriginAccess"),
     CHROME_HEIGHT = 0,
     OUT_OF_PROCESS = 1,
+    VIEWPORT_WIDTH = window.qnx.webplatform.getApplication().getEnv("WIDTH") || screen.width,
+    VIEWPORT_HEIGHT = window.qnx.webplatform.getApplication().getEnv("HEIGHT") || screen.height - CHROME_HEIGHT,
     webview,
     _webviewObj;
 
@@ -38,7 +40,7 @@ webview =
             _webviewObj.visible = true;
             _webviewObj.active = true;
             _webviewObj.zOrder = 0;
-            _webviewObj.setGeometry(0, CHROME_HEIGHT, screen.width, screen.height - CHROME_HEIGHT);
+            _webviewObj.setGeometry(0, CHROME_HEIGHT, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
             if (typeof config.backgroundColor !== 'undefined') {
                 _webviewObj.backgroundColor = config.backgroundColor;
