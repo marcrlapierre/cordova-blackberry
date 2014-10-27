@@ -29,7 +29,7 @@ controllerWebView = {
         controller.enableCrossSiteXHR = true;
         controller.visible = false;
         controller.active = false;
-        controller.setGeometry(0, 0, window.qnx.webplatform.getApplication().getEnv("WIDTH") || screen.width, window.qnx.webplatform.getApplication().getEnv("HEIGHT") || screen.height);
+        controller.setGeometry(0, 0, screen.width, screen.height);
         controller.setFileSystemSandbox = false;
 
         /* Remote functions that are published to allow communication with
